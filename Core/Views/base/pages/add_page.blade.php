@@ -1,0 +1,522 @@
+@extends('core::base.layouts.master')
+
+@section('title')
+    {{ translate('Add Page') }}
+@endsection
+
+@section('custom_css')
+     <!-- Select2 -->
+     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+    <link rel="stylesheet" href="{{ asset('/public/backend/assets/libs/choices.js/public/assets/styles/choices.min.css') }}">
+    <!--  End select2  -->
+    <!--Editor-->
+    <link href="{{ asset('/public/backend/assets/libs/summernote/summernote-lite.css') }}" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ asset('/public/backend/assets/libs/dropzone/dropzone.css') }}" />
+@endsection
+
+@section('main_content')
+    <!-- Main Content -->
+
+    <form class="form-horizontal my-4 mb-4" id="page_form" action="{{ route('core.page.store') }}" method="post"
+        enctype="multipart/form-data">
+        @csrf
+
+        <input type="hidden" id="page_id" name="id" value="">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="mb-3">
+                    <p class="alert alert-info">You are inserting <strong>"{{ getLanguageNameByCode(getDefaultLang()) }}"</strong> version</p>
+                </div>
+                <div class="card custom-card mb-30">
+                    <div class="card-header justify-content-between">
+                        <div class="card-title">
+                            {{ translate('Add Page') }}
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {{-- Title Field --}}
+                        <div class="col-md-12 mb-3">
+                            <label for="name" class="form-label">{{ translate('Page Title') }} <span class="text-danger">*</span></label>
+                            <input type="text" name="title" id="title" class="form-control page_title"
+                                    value="{{ old('title') }}" placeholder="{{ translate('Add Title') }}" required>
+                                <input type="hidden" name="permalink" id="permalink_input_field" required
+                                    value="{{ old('permalink') }}">
+                                @if ($errors->has('title'))
+                                    <p class="text-danger">{{ $errors->first('title') }}</p>
+                                @endif
+                        </div>
+                        {{-- Title Field End --}}
+                        <!--Permalink-->
+                        <div class="col-md-12 my-4 permalink-input-group d-none @if ($errors->has('permalink')) d-flex @endif">
+                            <div class="col-sm-2">
+                                <label class="font-14 bold black">{{ translate('Permalink') }} </label>
+                            </div>
+                            <div class="col-sm-10">
+                                <a href="#" onclick="pagePreviewDraft('preview')">{{ url('') }}/page/<span
+                                        id="permalink">{{ old('permalink') }}</span><span
+                                        class="btn btn-link btn-wave waves-effect waves-light ml-1 permalink-edit-btn">{{ translate('Edit') }}</span></a>
+                                @if ($errors->has('permalink'))
+                                    <p class="text-danger">{{ $errors->first('permalink') }}</p>
+                                @endif
+                                <div class="permalink-editor d-none">
+                                    <input type="text" class="form-control" id="permalink-updated-input"
+                                        placeholder="{{ translate('Type here') }}" value="{{ old('permalink') }}">
+                                    <button type="button" class="btn btn-danger btn-sm btn-wave waves-effect waves-light mt-2 btn-danger permalink-cancel-btn"
+                                        data-dismiss="modal">{{ translate('Cancel') }}</button>
+                                    <button type="button"
+                                        class="btn btn-primary btn-sm btn-wave waves-effect waves-light mt-2 permalink-save-btn">{{ translate('Save') }}</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!--Permalink End-->
+
+                        {{-- Content Field --}}
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">{{ translate('Content') }} </label>
+                            <div class="editor-wrap">
+                                    <textarea name="content" id="page_content" class="form-control">{{ old('content') }}</textarea>
+                                </div>
+                                @if ($errors->has('content'))
+                                    <p class="text-danger mt-2"> {{ $errors->first('content') }} </p>
+                                @endif
+                        </div>
+                        {{-- Content Field End --}}
+                    </div>
+                </div>
+                {{-- Seo Information --}}
+                <div class="card custom-card mb-4">
+                    <div class="card-header justify-content-between">
+                        <div class="card-title">
+                            {{ translate('Seo Meta Tags') }}
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">{{ translate('Meta Title') }} </label>
+                                <input type="text" name="meta_title" class="form-control"
+                                value="{{ old('meta_title') }}" placeholder="{{ translate('Type here') }}">
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                    <label class="form-label">{{ translate('Meta Description') }} </label>
+                                    <textarea name="meta_description" class="form-control"> {{ old('meta_description') }}</textarea>
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                    <label class="form-label">{{ translate('Meta Image') }} </label>
+                                    @include('core::base.includes.media.media_input', [
+                                        'input' => 'meta_image',
+                                        'data' => old('meta_image'),
+                                    ])
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {{-- Seo Information End --}}
+            </div>
+
+            {{-- Add Page Side Field --}}
+            <div class="col-md-4">
+                <div class="row px-3">
+                    {{-- Publish Section --}}
+                    <div class="card custom-card col-12 order-last order-md-first mt-5 mt-md-0">
+                        <div class="card-header justify-content-between">
+                            <div class="card-title">
+                                {{ translate('Publish') }}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            {{-- Draft,previe,pending button --}}
+                        
+                            <div class="row my-4 mx-1 justify-content-between ">
+                                <div class="btn-group" role="group" aria-label="Basic mixed styles example">
+                                    <a class="btn btn-dark btn-wave" onclick="pagePreviewDraft('draft')">{{ translate('Draft') }}</a>
+                                    <a class="btn btn-light btn-wave" onclick="pagePreviewDraft('preview')">{{ translate('Preview') }}</a>
+                                </div>
+                            </div>
+
+                            {{-- visibility part --}}
+                            <div class="row mt-2">
+                                <div class="col-md-12">  
+                                    <div class="form-group">
+                                        <label><i class="bi bi-eye"></i> {{ translate('Visibility') }} :</label>
+                                        <span class="font-14 bold black ml-2"
+                                            id="current_visibility">{{ translate('Public') }}</span>
+                                        <a href="#" class="btn btn-link btn-wave waves-effect waves-light"
+                                            id="visibility_edit_button">{{ translate('Edit') }}</a>
+                                        @if ($errors->has('visibility'))
+                                            <p class="text-danger">{{ $errors->first('visibility') }}</p>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mx-1 my-2 d-none" id="visibility_form">
+                                            <input type="radio"  class="form-check-input" checked name="visibility" id="visibility-radio-public"
+                                            value="public" />
+                                            <label class="form-check-label selectit" for="visibility-radio-public">
+                                                {{ translate('Public') }}
+                                            </label>
+                                        <br />
+
+                                        <span id="sticky-span" class="ml-4">
+                                            
+                                            <input id="sticky" name="sticky" class="form-check-input" type="checkbox" value="sticky" />
+                                            <label for="sticky"
+                                                class="selectit form-check-label fs-12">{{ translate('Stick this post to the front of blog list page') }}</label><br />
+                                        </span>
+
+                                        <input type="radio" name="visibility" class="form-check-input" id="visibility-radio-password" value="password" />
+                                        <label for="visibility-radio-password"
+                                            class="form-check-label selectit">{{ translate('Password protected') }}</label>
+                                        <br />
+                                        <span id="password-span" class="ml-4">
+                                            <input type="text" class="form-control" name="blog_password" id="blog_password" value=""
+                                                maxlength="10" /><br />
+                                            <span
+                                                class="text-danger my-1 ml-3 font-12 d-block">{{ translate('If Password Field is remain Empty then visibility will be saved as Public.') }}</span>
+                                        </span>
+
+                                        <input type="radio" class="form-check-input" name="visibility" id="visibility-radio-private" value="private" />
+                                        <label for="visibility-radio-private"
+                                            class="form-check-label selectit">{{ translate('Private') }}</label><br />
+                                    </div>
+                            {{-- visibility part end --}}
+
+                            {{-- publish schedule part --}}
+                            <div class="row my-2 mx-1">
+                                <div class="form-group">
+                                    <label for="publish_at" class="font-14 black ml-1 mt-2">{{ translate('Publish') }} :</label>
+                                    <div class="input-group">
+                                        <div class="input-group-text text-muted"> <i class="ri-calendar-line"></i> </div>
+                                        <input type="text" class="form-control" name="publish_at" id="publish_at" value="{{ old('start_date') }}" placeholder="Choose date with time">
+                                    </div>
+                                </div>
+                            </div>
+                            {{-- publish schedule part end --}}
+                            <div class="row mx-1 mt-4">
+                                <button type="submit" class="btn btn-success label-btn">
+                                    <i class="bi bi-save label-btn-icon me-2"></i>
+                                    {{ translate('Publish') }}
+                                </button>
+                            </div>
+                        </div>
+                </div>
+            </div>
+                    {{-- Publish Section End --}}
+
+                    {{-- Page Attributes --}}
+                    <div class="card custom-card mt-5 mt-md-5 col-12">
+                        <div class="card-header justify-content-between">
+                            <div class="card-title">
+                                {{ translate('Page Attributes') }}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group row my-4">
+                                <label for="page_parent" class="col-sm-4 font-14 bold black">{{ translate('Parents') }}</label>
+                                <div class="col-sm-8">
+                                    <select class="js-example-basic-single form-control" name="page_parent" id="page_parent">
+                                        <option value="">{{ translate('Select a Parent Page') }}</option>
+                                        @foreach ($pages as $page)
+                                            <option value="{{ $page->id }}">
+                                                @php
+                                                    $tlpage = Core\Models\TlPage::where('id', $page->id)->first();
+                                                @endphp
+                                                {{ $tlpage->translation('title', getLocale()) }}
+                                            </option>
+                                            @if (count($tlpage->childs))
+                                                @include('core::base.pages.includes.page_child', [
+                                                    'child_page' => $tlpage->childs,
+                                                    'label' => 1,
+                                                    'parent' => null,
+                                                ])
+                                            @endif
+                                        @endforeach
+                                    </select>
+                                </div>
+                                @if ($errors->has('page_parent'))
+                                    <p class="text-danger">{{ $errors->first('page_parent') }}</p>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    {{-- Page Attributes End --}}
+
+                    {{-- Featured Image --}}
+                    <div class="card custom-card mt-5 col-12">
+                        <div class="card-header justify-content-between">
+                            <div class="card-title">
+                                {{ translate('Featured Image') }}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group row justify-content-center align-items-center mt-4 mx-auto">
+                                <div class="col-sm-12">
+                                        @include('core::base.includes.media.media_input', [
+                                        'input' => 'page_image',
+                                        'data' => old('page_image'),
+                                    ])
+                                    @if ($errors->has('page_image'))
+                                        <p class="text-danger">{{ $errors->first('page_image') }}</p>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {{-- Page Image End --}}
+                </div>
+            </div>
+            {{-- Add Page Side Field End --}}
+        </div>
+    </form>
+    @include('core::base.media.partial.media_modal')
+    <!-- End Main Content -->
+@endsection
+
+
+@section('custom_scripts')
+    <!--Select2-->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="{{ asset('/public/backend/assets/libs/dropzone/dropzone-min.js') }}"></script>
+    <!--End Select2-->
+    <!--Editor-->
+    <script src="{{ asset('/public/backend/assets/libs/summernote/summernote-lite.js') }}"></script>
+    <!--End Editor-->
+    <script src="{{ asset('/public/backend/assets/libs/flatpickr/flatpickr.min.js') }}"></script>
+
+    <script>
+        (function($) {
+            "use strict";
+            initDropzone()
+            $(document).ready(function() {
+                is_for_browse_file = true
+                filtermedia()
+
+                $.ajaxSetup({
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')
+                    }
+                });
+
+                flatpickr("#publish_at", {
+                    enableTime: true,
+                    dateFormat: "d/m/Y H:i",
+                });
+
+                //Visibility Edit button toggle
+                ButtonToggle('#visibility_edit_button', '#visibility_form');
+                // Visibility input load
+                let visibility = $("input:radio:checked").val();
+                updateVisibility(visibility);
+                // checked visibility as current
+                $('input:radio').click(function() {
+                    let visibility = $(this).val();
+                    let visibility_text = '';
+                    updateVisibility(visibility);
+                });
+
+                // SUMMERNOTE INIT
+                $('#page_content').summernote({
+                    tabsize: 2,
+                    height: 200,
+                    codeviewIframeFilter: false,
+                    codeviewFilter: true,
+                    codeviewFilterRegex: /<\/*(?:applet|b(?:ase|gsound|link)|embed|frame(?:set)?|ilayer|l(?:ayer|ink)|meta|object|s(?:cript|tyle)|t(?:itle|extarea)|xml)[^>]*>|on\w+\s*=\s*"[^"]*"|on\w+\s*=\s*'[^']*'|on\w+\s*=\s*[^\s>]+/gi,
+                    toolbar: [
+                        ["style", ["style"]],
+                        ["font", ["bold", "underline", "clear"]],
+                        ["color", ["color"]],
+                        ["para", ["ul", "ol", "paragraph"]],
+                        ["table", ["table"]],
+                        ["insert", ["link", "picture", "video"]],
+                        ["view", ["fullscreen", "codeview", "help"]],
+                    ],
+                    placeholder: 'Page Content',
+                    callbacks: {
+                        onImageUpload: function(images, editor, welEditable) {
+                            sendFile(images[0], editor, welEditable);
+                        },
+                        onChangeCodeview: function(contents, $editable) {
+                            let code = $(this).summernote('code')
+                            code = code.replace(
+                                /<\/*(?:applet|b(?:ase|gsound|link)|embed|frame(?:set)?|ilayer|l(?:ayer|ink)|meta|object|s(?:cript|tyle)|t(?:itle|extarea)|xml)[^>]*>|on\w+\s*=\s*"[^"]*"|on\w+\s*=\s*'[^']*'|on\w+\s*=\s*[^\s>]+/gi,
+                                '')
+                            $(this).val(code)
+                        }
+                    }
+                });
+
+                $('#page_parent').select2({
+                    // theme: "classic",
+                });
+                $('#page_template').select2({
+                    // theme: "classic",
+                });
+            });
+
+            /*Generate permalink*/
+            $(".page_title").change(function(e) {
+                e.preventDefault();
+                let name = DOMPurify.sanitize($(".page_title").val());
+                let permalink = string_to_slug(name);
+                $("#permalink").html(permalink);
+                $("#permalink_input_field").val(permalink);
+                $(".permalink-input-group").removeClass("d-none");
+                $(".permalink-editor").addClass("d-none");
+                $(".permalink-edit-btn").removeClass("d-none");
+            });
+            /*edit permalink*/
+            $(".permalink-edit-btn").on("click", function(e) {
+                e.preventDefault();
+                let permalink = $("#permalink").html();
+                $("#permalink-updated-input").val(permalink);
+                $(".permalink-edit-btn").addClass("d-none");
+                $(".permalink-editor").removeClass("d-none");
+            });
+            /*Cancel permalink edit*/
+            $(".permalink-cancel-btn").on("click", function(e) {
+                e.preventDefault();
+                $("#permalink-updated-input").val();
+                $(".permalink-editor").addClass("d-none");
+                $(".permalink-edit-btn").removeClass("d-none");
+            });
+            /*Update permalink*/
+            $(".permalink-save-btn").on("click", function(e) {
+                e.preventDefault();
+                let input = $("#permalink-updated-input").val();
+                let updated_permalnk = string_to_slug(input);
+                $("#permalink_input_field").val(updated_permalnk);
+                $("#permalink").html(updated_permalnk);
+                $(".permalink-editor").addClass("d-none");
+                $(".permalink-edit-btn").removeClass("d-none");
+            });
+        })(jQuery);
+
+        // add new buttonn toogle -- function
+        function ButtonToggle(button, form) {
+            "use strict";
+            $(button).on('click', function() {
+                $(form).toggleClass('d-none');
+            });
+        }
+
+        // Visibility Input dynamic
+        function updateVisibility(visibility) {
+            "use strict";
+            // Show sticky for public posts.
+            if (visibility != 'public') {
+                $('#sticky').prop('checked', false);
+                $('#sticky-span').hide();
+            } else {
+                $('#sticky-span').show();
+            }
+            // Show password input field for password protected post.
+            if (visibility != 'password') {
+                $('#password-span').hide();
+            } else {
+                $('#password-span').show();
+            }
+            let visibility_text;
+            switch (visibility) {
+                case 'public':
+                    visibility_text = '{{ translate('Public') }}';
+                    break;
+                case 'private':
+                    visibility_text = '{{ translate('Private') }}';
+                    break;
+                case 'password':
+                    visibility_text = '{{ translate('Password') }}';
+                    break;
+            }
+            $('#current_visibility').text(visibility_text);
+        }
+
+
+        /**
+         * Generate slug
+         *
+         */
+        function string_to_slug(str) {
+            "use strict";
+            str = str.replace(/^\s+|\s+$/g, ""); // trim
+            str = str.toLowerCase();
+
+            // remove accents, swap ñ for n, etc
+            var from = "àáäâèéëêìíïîòóöôùúüûñç·/_,:;";
+            var to = "aaaaeeeeiiiioooouuuunc------";
+            for (var i = 0, l = from.length; i < l; i++) {
+                str = str.replace(new RegExp(from.charAt(i), "g"), to.charAt(i));
+            }
+
+            str = str
+                .replace(/\s+/g, "-") // collapse whitespace and replace by -
+                .replace(/-+/g, "-") // collapse dashes
+                .replace(/[^\w\s\d\u00C0-\u1FFF\u2C00-\uD7FF\-\_]/g, "-");
+
+            return str;
+        }
+
+        // page preview and draft
+        function pagePreviewDraft(action) {
+            "use strict";
+            var formData = $('#page_form').serializeArray();
+            formData.push({
+                name: "action",
+                value: action
+            });
+
+            $.ajax({
+                method: 'POST',
+                url: '{{ route('core.page.draft.preview') }}',
+                dataType: 'json',
+                data: formData
+            }).done(function(response) {
+                if (response.error) {
+                    toastr.error(response.error, "Error!");
+                } else {
+                    switch (action) {
+                        case 'draft':
+                            $('#page_id').val(response.id);
+                            toastr.success(response.success, "Success!");
+                            break;
+                        case 'preview':
+                            $('#page_id').val(response.id);
+                            window.open('{{ route('core.page.preview') }}?page=' + response.permalink);
+                            break;
+                        default:
+                            toastr.error(response.error, "Error!");
+                            break;
+                    }
+                }
+            });
+        }
+
+        // send file function summernote
+        function sendFile(image, editor, welEditable) {
+            "use strict";
+            let imageUploadUrl = '{{ route('core.page.content.image') }}';
+            let data = new FormData();
+            data.append("image", image);
+
+            $.ajax({
+                data: data,
+                type: "POST",
+                url: imageUploadUrl,
+                cache: false,
+                contentType: false,
+                processData: false,
+                success: function(data) {
+                    if (data.url) {
+                        var image = $('<img>').attr('src', data.url);
+                        $('#page_content').summernote("insertNode", image[0]);
+                    } else {
+                        toastr.error(data.error, "Error!");
+                    }
+                },
+                error: function(data) {
+                    toastr.error('Image Upload Failed', "Error!");
+                }
+            });
+        }
+    </script>
+@endsection
